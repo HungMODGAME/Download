@@ -58,16 +58,16 @@
     </main>
 
     <script>
-        // 🔥 Cấu hình Firebase (giống index.html)
+        // 🔥 Cấu hình Firebase
         const firebaseConfig = {
-  apiKey: "AIzaSyC3bLuGIJCVJtDAseisNI29KnlPoXbeZ5w",
-  authDomain: "download-28199.firebaseapp.com",
-  databaseURL: "https://download-28199-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "download-28199",
-  storageBucket: "download-28199.firebasestorage.app",
-  messagingSenderId: "534841647343",
-  appId: "1:534841647343:web:0b26a22a0fba11a683fb1a"
-};
+            apiKey: "AIzaSyC3bLuGIJCVJtDAseisNI29KnlPoXbeZ5w",
+            authDomain: "download-28199.firebaseapp.com",
+            databaseURL: "https://download-28199-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "download-28199",
+            storageBucket: "download-28199.firebasestorage.app",
+            messagingSenderId: "534841647343",
+            appId: "1:534841647343:web:0b26a22a0fba11a683fb1a"
+        };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const categoriesRef = database.ref('categories');
@@ -120,7 +120,7 @@
                         </div>
                         <div>
                             <strong>Mật khẩu:</strong> 
-                            <span>••••••••</span>
+                            <span>${cat.password}</span>
                             <button class="change-password-btn" onclick="showChangePasswordForm(${index})">Đổi mật khẩu</button>
                             <div id="change-pwd-${index}" class="change-password-form">
                                 <input type="text" id="new-pwd-${index}" placeholder="Mật khẩu mới">
