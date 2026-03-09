@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang chủ - Kho link tải</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+</head>
+<body>
+    <header>
+        <h1>📥 Kho tải liệu</h1>
+    </header>
+
+    <main>
+        <h2>Danh mục</h2>
+        <div id="category-list"></div>
+
+        <!-- Modal nhập mật khẩu -->
+        <div id="password-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h3 id="modal-category-name"></h3>
+                <input type="password" id="modal-password" placeholder="Nhập mật khẩu">
+                <button id="modal-submit">Xác nhận</button>
+                <p id="modal-error" style="color:red; display:none;">Sai mật khẩu!</p>
+            </div>
+        </div>
+
+        <!-- Hiển thị links sau khi nhập đúng mật khẩu -->
+        <div id="links-display" style="display:none;">
+            <h2 id="selected-category-title"></h2>
+            <div id="links-list"></div>
+            <button id="back-to-categories">← Quay lại danh mục</button>
+        </div>
+    </main>
+
+    <script>
+        // 🔥 Thay thế bằng cấu hình Firebase của bạn
+        const firebaseConfig = {
+  apiKey: "AIzaSyC3bLuGIJCVJtDAseisNI29KnlPoXbeZ5w",
+  authDomain: "download-28199.firebaseapp.com",
+  databaseURL: "https://download-28199-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "download-28199",
+  storageBucket: "download-28199.firebasestorage.app",
+  messagingSenderId: "534841647343",
+  appId: "1:534841647343:web:0b26a22a0fba11a683fb1a"
+};
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const categoriesRef = database.ref('categories');
+
+        let categories = [];
+        let currentCategory = null;
+
+        // Lắng nghe thay đổi dữ liệu realtime
+        categoriesRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            categories = data ? data : [];
+            displayCategories();
+        });
+
+        // Hiển thị danh sách danh mục
+        function displayCategories() {
+            const container = document.getElementById('category-list');
+            const linksDisplay = document.getElementById('links-display');
+            linksDisplay.style.display = 'none';
+            container.style.display = 'block';
+
+            if (categories.length === 0) {
+                container.innerHTML = '<p>Chưa có danh mục nào.</p>';
+                return;
+            }
+
+            let html = '';
+            categories.forEach((cat, index) => {
+                html += `<div class="category-item" data-index="${index}">${cat.name}</div>`;
+            });
+            container.innerHTML = html;
+
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const index = this.dataset.index;
+                    currentCategory = categories[index];
+                    openModal(currentCategory.name, index);
+                });
+            });
+        }
+
+        // Modal
+        const modal = document.getElementById('password-modal');
+        const modalCategoryName = document.getElementById('modal-category-name');
+        const modalPassword = document.getElementById('modal-password');
+        const modalSubmit = document.getElementById('modal-submit');
+        const modalError = document.getElementById('modal-error');
+        const closeBtn = document.querySelector('.close');
+
+        function openModal(catName, catIndex) {
+            modalCategoryName.textContent = catName;
+            modalPassword.value = '';
+            modalError.style.display = 'none';
+            modal.style.display = 'block';
+            modalSubmit.dataset.index = catIndex;
+        }
+
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        modalSubmit.onclick = function() {
+            const index = this.dataset.index;
+            const enteredPwd = modalPassword.value;
+            const cat = categories[index];
+            if (cat.password === enteredPwd) {
+                modal.style.display = 'none';
+                showLinks(cat);
+            } else {
+                modalError.style.display = 'block';
+            }
+        };
+
+        function showLinks(cat) {
+            document.getElementById('category-list').style.display = 'none';
+            const linksDisplay = document.getElementById('links-display');
+            linksDisplay.style.display = 'block';
+            document.getElementById('selected-category-title').textContent = `Danh sách tải: ${cat.name}`;
+
+            const linksContainer = document.getElementById('links-list');
+            if (cat.links && cat.links.length > 0) {
+                let html = '<ul>';
+                cat.links.forEach(link => {
+                    html += `<li><a href="${link.url}" target="_blank">${link.name}</a></li>`;
+                });
+                html += '</ul>';
+                linksContainer.innerHTML = html;
+            } else {
+                linksContainer.innerHTML = '<p>Chưa có link nào trong danh mục này.</p>';
+            }
+        }
+
+        document.getElementById('back-to-categories').addEventListener('click', function() {
+            document.getElementById('links-display').style.display = 'none';
+            document.getElementById('category-list').style.display = 'block';
+        });
+    </script>
+</body>
+</html>

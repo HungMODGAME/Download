@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản trị danh mục và link tải</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        .change-password-btn {
+            background: #ffc107;
+            color: #333;
+            margin-left: 10px;
+        }
+        .change-password-form {
+            display: none;
+            margin-top: 5px;
+        }
+        .change-password-form input {
+            width: 150px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔐 Trang quản trị</h1>
+        <div id="admin-nav">
+            <a href="index.html" target="_blank">📂 Xem trang chủ</a>
+        </div>
+    </header>
+
+    <main>
+        <div id="login-section">
+            <h2>Đăng nhập</h2>
+            <input type="password" id="password-input" placeholder="Mật khẩu">
+            <button onclick="checkPassword()">Vào</button>
+            <p id="login-error" style="color:red; display:none;">Sai mật khẩu!</p>
+        </div>
+
+        <div id="admin-panel" style="display:none;">
+            <h2>Quản lý danh mục</h2>
+            <div>
+                <h3>Thêm danh mục mới</h3>
+                <form id="add-category-form" onsubmit="addCategory(event)">
+                    <input type="text" id="cat-name" placeholder="Tên danh mục" required>
+                    <input type="text" id="cat-password" placeholder="Mật khẩu" required>
+                    <button type="submit">Thêm danh mục</button>
+                </form>
+            </div>
+
+            <hr>
+
+            <div id="categories-admin-list"></div>
+        </div>
+    </main>
+
+    <script>
+        // 🔥 Cấu hình Firebase (giống index.html)
+        const firebaseConfig = {
+  apiKey: "AIzaSyC3bLuGIJCVJtDAseisNI29KnlPoXbeZ5w",
+  authDomain: "download-28199.firebaseapp.com",
+  databaseURL: "https://download-28199-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "download-28199",
+  storageBucket: "download-28199.firebasestorage.app",
+  messagingSenderId: "534841647343",
+  appId: "1:534841647343:web:0b26a22a0fba11a683fb1a"
+};
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const categoriesRef = database.ref('categories');
+
+        const ADMIN_PASSWORD = 'admin'; // Mật khẩu đăng nhập admin (bạn có thể đổi)
+
+        let categories = [];
+
+        // Lắng nghe dữ liệu realtime
+        categoriesRef.on('value', (snapshot) => {
+            categories = snapshot.val() ? snapshot.val() : [];
+            if (document.getElementById('admin-panel').style.display === 'block') {
+                loadCategoriesForAdmin();
+            }
+        });
+
+        function checkPassword() {
+            const pwd = document.getElementById('password-input').value;
+            if (pwd === ADMIN_PASSWORD) {
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                document.getElementById('admin-nav').style.display = 'block';
+                loadCategoriesForAdmin();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        }
+
+        // Ghi dữ liệu lên Firebase
+        function saveCategoriesToFirebase(newCategories) {
+            categoriesRef.set(newCategories);
+        }
+
+        function loadCategoriesForAdmin() {
+            const container = document.getElementById('categories-admin-list');
+            if (categories.length === 0) {
+                container.innerHTML = '<p>Chưa có danh mục nào.</p>';
+                return;
+            }
+
+            let html = '';
+            categories.forEach((cat, index) => {
+                html += `
+                    <div class="category-admin" data-index="${index}">
+                        <div class="category-header">
+                            <h3>${cat.name}</h3>
+                            <div>
+                                <button onclick="deleteCategory(${index})">Xóa danh mục</button>
+                            </div>
+                        </div>
+                        <div>
+                            <strong>Mật khẩu:</strong> 
+                            <span>••••••••</span>
+                            <button class="change-password-btn" onclick="showChangePasswordForm(${index})">Đổi mật khẩu</button>
+                            <div id="change-pwd-${index}" class="change-password-form">
+                                <input type="text" id="new-pwd-${index}" placeholder="Mật khẩu mới">
+                                <button onclick="changePassword(${index})">Lưu</button>
+                                <button onclick="hideChangePasswordForm(${index})">Hủy</button>
+                            </div>
+                        </div>
+                        <h4>Links trong danh mục:</h4>
+                        <div id="links-${index}" class="links-list">
+                `;
+                if (cat.links && cat.links.length > 0) {
+                    cat.links.forEach((link, linkIndex) => {
+                        html += `
+                            <div class="link-item">
+                                <a href="${link.url}" target="_blank">${link.name}</a>
+                                <button onclick="deleteLink(${index}, ${linkIndex})">Xóa</button>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<p>Chưa có link.</p>';
+                }
+                html += `
+                        </div>
+                        <div class="link-form">
+                            <input type="text" id="link-name-${index}" placeholder="Tên link">
+                            <input type="url" id="link-url-${index}" placeholder="URL">
+                            <button onclick="addLink(${index})">Thêm link</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function showChangePasswordForm(index) {
+            document.getElementById(`change-pwd-${index}`).style.display = 'block';
+        }
+        function hideChangePasswordForm(index) {
+            document.getElementById(`change-pwd-${index}`).style.display = 'none';
+        }
+
+        function changePassword(index) {
+            const newPwd = document.getElementById(`new-pwd-${index}`).value.trim();
+            if (!newPwd) return;
+            categories[index].password = newPwd;
+            saveCategoriesToFirebase(categories);
+            hideChangePasswordForm(index);
+            alert('Đã đổi mật khẩu!');
+        }
+
+        function addCategory(event) {
+            event.preventDefault();
+            const name = document.getElementById('cat-name').value.trim();
+            const pwd = document.getElementById('cat-password').value.trim();
+            if (!name || !pwd) return;
+
+            categories.push({ name, password: pwd, links: [] });
+            saveCategoriesToFirebase(categories);
+            document.getElementById('cat-name').value = '';
+            document.getElementById('cat-password').value = '';
+        }
+
+        function deleteCategory(index) {
+            if (confirm('Bạn có chắc muốn xóa danh mục này?')) {
+                categories.splice(index, 1);
+                saveCategoriesToFirebase(categories);
+            }
+        }
+
+        function addLink(catIndex) {
+            const nameInput = document.getElementById(`link-name-${catIndex}`);
+            const urlInput = document.getElementById(`link-url-${catIndex}`);
+            const name = nameInput.value.trim();
+            const url = urlInput.value.trim();
+            if (!name || !url) return;
+
+            if (!categories[catIndex].links) categories[catIndex].links = [];
+            categories[catIndex].links.push({ name, url });
+            saveCategoriesToFirebase(categories);
+            nameInput.value = '';
+            urlInput.value = '';
+        }
+
+        function deleteLink(catIndex, linkIndex) {
+            categories[catIndex].links.splice(linkIndex, 1);
+            saveCategoriesToFirebase(categories);
+        }
+    </script>
+</body>
+</html>
